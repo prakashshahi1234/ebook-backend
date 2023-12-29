@@ -1,21 +1,35 @@
 // Create Token and saving in cookie
 
 const sendToken = (user, statusCode, res) => {
-    const token = user.getJWTToken();
-    
-    // options for cookie
-    const options = {
+    const accessToken = user.getAccessToken();
+    const refreshToken = user.getRefreshToken();
+    // options for cookie 
+
+    // use same secret expire time and cookie expire time 
+    const refreshOption = {
       expires: new Date(
-        Date.now() + process.env.JWT_EXPIRE * 24 * 60 * 60 * 1000
+        Date.now() + process.env.JWT_REFRESH_EXPIRE * 24 * 60 * 60 * 1000
       ),
       httpOnly: true,
+      secure:true
+    };
+    const accessOption = {
+      expires: new Date(
+        Date.now() + process.env.JWT_ACCESS_EXPIRE * 24 * 60 * 60 * 1000
+      ),
+      httpOnly: true,
+      secure:true
     };
   
-    res.status(statusCode).cookie("token", token, options).json({
+    res.status(statusCode)
+    .cookie("accessToken", accessToken, accessOption)
+    .cookie("refreshToken" ,refreshToken , refreshOption)
+    .json({
       success: true,
       user,
-      token,
     });
   };
+
+
   
   module.exports = sendToken;
