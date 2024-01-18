@@ -1,5 +1,5 @@
-const User = require('../model/user');
-const ErrorHander = require('../utils/errorhandler');
+const User = require('../../model/user');
+const ErrorHander = require('../../utils/errorhandler');
 
 // Middleware to check if the user is suspended
 exports.checkSuspendedUser = async (req, res, next) => {

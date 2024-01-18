@@ -1,0 +1,114 @@
+{
+    "configurations": [
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "chunker:StockTradingStateMachine",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/sls-event/chunker/template.yaml",
+                "logicalId": "StockTradingStateMachine"
+            },
+            "lambda": {
+                "payload": {},
+                "environmentVariables": {},
+                "runtime": "nodejs18.x"
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "chunker:StockCheckerFunction (nodejs18.x)",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/sls-event/chunker/template.yaml",
+                "logicalId": "StockCheckerFunction"
+            },
+            "lambda": {
+                "payload": {},
+                "environmentVariables": {},
+                "runtime": "nodejs18.x"
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "chunker:StockSellerFunction (nodejs18.x)",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/sls-event/chunker/template.yaml",
+                "logicalId": "StockSellerFunction"
+            },
+            "lambda": {
+                "payload": {},
+                "environmentVariables": {},
+                "runtime": "nodejs18.x"
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "chunker:StockBuyerFunction (nodejs18.x)",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/sls-event/chunker/template.yaml",
+                "logicalId": "StockBuyerFunction"
+            },
+            "lambda": {
+                "payload": {},
+                "environmentVariables": {},
+                "runtime": "nodejs18.x"
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "chunker:TransactionTable",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/sls-event/chunker/template.yaml",
+                "logicalId": "TransactionTable"
+            },
+            "lambda": {
+                "payload": {},
+                "environmentVariables": {},
+                "runtime": "nodejs18.x"
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "pdf-into-chunk:HelloWorldFunction (nodejs18.x)",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/sls-event/pdf-into-chunk/template.yaml",
+                "logicalId": "HelloWorldFunction"
+            },
+            "lambda": {
+                "payload": {},
+                "environmentVariables": {},
+                "runtime": "nodejs18.x"
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "API pdf-into-chunk:HelloWorldFunction (nodejs18.x)",
+            "invokeTarget": {
+                "target": "api",
+                "templatePath": "${workspaceFolder}/sls-event/pdf-into-chunk/template.yaml",
+                "logicalId": "HelloWorldFunction"
+            },
+            "api": {
+                "path": "/hello",
+                "httpMethod": "get",
+                "payload": {
+                    "json": {}
+                }
+            },
+            "lambda": {
+                "runtime": "nodejs18.x"
+            }
+        }
+    ]
+}

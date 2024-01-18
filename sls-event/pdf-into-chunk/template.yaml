@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: "PDF Processing Lambda"
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 256
+
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ebook-nepal
+
+  PdfProcessingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.lambdaHandler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: 
+              Ref: MyS3Bucket
+            Events: s3:ObjectCreated:*
+
+Outputs:
+  PdfProcessingFunctionArn:
+    Description: "PDF Processing Lambda Function ARN"
+    Value: !GetAtt PdfProcessingFunction.Arn

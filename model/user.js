@@ -10,13 +10,6 @@ const userSchema = new mongoose.Schema({
     unique: true,
   },
 
-  username: {
-    type: String,
-    trim: true,
-    unique: true,
-    match: [/^[a-z0-9_]{3,20}$/, "Invalid username"],
-  },
-
   name: {
     type: String,
     match: [/^[A-Za-z][A-Za-z\s]*[A-Za-z]$/, "Invalid name"],
@@ -25,7 +18,7 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
+    unique: [true, "This iiiiiiiiiiiiiiiiiiiiiiiie"],
     trim: true,
     lowercase: true,
     match: [
@@ -53,6 +46,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     select: false,
   },
+  identityDetail:{
+    type:Object,
+    // select:false,
+
+  },
 
   password: {
     type: String,
@@ -64,12 +62,6 @@ const userSchema = new mongoose.Schema({
     select: false,
   },
 
-  books_for_sale: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Book",
-    },
-  ],
 
   // library can have unpurchased book with lock.
   library: {
@@ -83,19 +75,7 @@ const userSchema = new mongoose.Schema({
    
 },
 
-  purchases: 
-    {
-      book_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Book",
-      },
-      paymentId: { type: mongoose.Schema.Types.ObjectId, ref: "payment" },
-      purchase_date: {
-        type: Date,
-        default: Date.now,
-      },
-      type:Array
-    },
+ 
   
 
   profileImage: {
@@ -120,6 +100,7 @@ const userSchema = new mongoose.Schema({
     },
   
   },
+  
   description: {
     type: String,
     validation:{

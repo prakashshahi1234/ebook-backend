@@ -11,14 +11,17 @@ const sendToken = (user, statusCode, res) => {
         Date.now() + process.env.JWT_REFRESH_EXPIRE * 24 * 60 * 60 * 1000
       ),
       httpOnly: true,
-      secure:true
+      secure:true,
+      sameSite:"lax"
+
     };
     const accessOption = {
       expires: new Date(
         Date.now() + process.env.JWT_ACCESS_EXPIRE * 24 * 60 * 60 * 1000
       ),
       httpOnly: true,
-      secure:true
+      secure:true,
+      sameSite:"lax"
     };
   
     res.status(statusCode)

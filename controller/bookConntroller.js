@@ -3,6 +3,7 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const Book = require("../model/book");
 const { v4: uuidv4 } = require("uuid");
 const User = require("../model/user");
+const ApiFeatures = require("../utils/apiFeature")
 
 // Create Book
 exports.createBook = catchAsyncErrors(async (req, res, next) => {
@@ -108,32 +109,136 @@ exports.updateBook = catchAsyncErrors(async (req, res, next) => {
 });
 
 
+// exports.getBookForUserChoices = catchAsyncErrors(async (req, res, next) => {
+
+//   const { categories, page = 1, pageSize = 10 } = req.body; // ask to set the category.
+
+//   // Calculate the number of documents to skip based on the page and pageSize
+//   const skip = (page - 1) * pageSize;
+
+//   // Find books matching the specified categories with pagination
+//   let books = await Book.find({
+//     category: { $in: categories },
+//     isSuspended: { suspended: false },
+//     isDeleted: { deleted: false },
+//     unPublished: false
+//   })  
+//     .skip(skip)
+//     .limit(pageSize);
+
+
+//   // If there are less than pageSize matching books, fetch additional books
+//   if (books.length < pageSize) {
+//     const additionalBooks = await Book.find({
+//       isSuspended: { suspended: false },
+//       isDeleted: { deleted: false },
+//       unPublished: false
+//     })
+//       .skip(skip + books.length)
+//       .limit(pageSize - books.length);
+
+//     books = [...books, ...additionalBooks];
+//   }
+
+//   return res.status(200).json({
+//     books
+//   });
+// });
+
+
+
 exports.getBookForUserChoices = catchAsyncErrors(async (req, res, next) => {
-  const { categories } = req.body;
+  const { categories, page = 1, pageSize = 10 } = req.body;
 
-  // Find books matching the specified categories
-  let books = await Book.find({
-    category: { $in: categories },
-    isSuspended: { suspended: false },
-    isDeleted: { deleted: false },
-    unPublished: false
-  }).limit(10);
+  // Calculate the number of documents to skip based on the page and pageSize
+  const skip = (page - 1) * pageSize;
 
-  // If there are less than 10 matching books, fetch additional books
-  if (books.length < 10) {
-    const additionalBooks = await Book.find({
-      isSuspended: { suspended: false },
-      isDeleted: { deleted: false },
-      unPublished: false
-    }).limit(20 - books.length);
-
-    books = [...books, ...additionalBooks];
-  }
+  // Use aggregation to calculate average rating
+  const books = await Book.aggregate([
+    {
+      $match: {
+        category: { $in: categories },
+        isSuspended: { suspended: false },
+        isDeleted: { deleted: false },
+        unPublished: false,
+      },
+    },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: pageSize,
+    },
+    {
+      $lookup: {
+        from: 'ratings',
+        localField: '_id',
+        foreignField: 'bookId',
+        as: 'ratings',
+      }
+    }
+,    
+    {
+      $addFields: {
+        avgRating: {
+          $avg: '$ratings.rating',
+        },
+        totalRatings: {
+          $size: '$ratings',
+        },
+      },
+    },
+    {
+      $project: {
+        ratings: 0, // Exclude the ratings field
+      },
+    },
+  ]);
 
   return res.status(200).json({
-    books
+    books,
   });
 });
+
+
+// search books
+exports.searchBooks = catchAsyncErrors(async (req, res, next) => {
+  const resultPerPage = 10; // You can adjust this value based on your requirements
+  const query = Book.find(); // Replace with your actual model
+
+  const apiFeatures = new ApiFeatures(query, req.query)
+    .search()
+    .filter()
+    .pagination(resultPerPage);
+
+  const books = await apiFeatures.query;
+
+  return res.status(200).json({
+    success: true,
+    count: books.length,
+    books,
+  });
+
+});
+
+
+exports.getBookById = catchAsyncErrors(async (req, res, next) => {
+
+  const book = await Book.findOne({bookId:req.params.bookId});
+
+if(!book){
+  return next(new ErrorHander("Book not found", 404));
+}
+
+return res.status(200).json({book , success:true});
+
+
+})
+
+
+
+
+
 
 
  

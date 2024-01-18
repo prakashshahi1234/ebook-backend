@@ -6,7 +6,7 @@ const ratingSchema = new mongoose.Schema({
     ref: 'Book',
     required: true,
   },
-  user: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User', // Assuming you have a User model
     required: true,
@@ -24,6 +24,8 @@ const ratingSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+ratingSchema.index({ bookId: 1, userId: 1 }, { unique: true });
 
 const Rating = mongoose.model('Rating', ratingSchema);
 
