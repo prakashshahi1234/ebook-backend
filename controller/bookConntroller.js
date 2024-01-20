@@ -16,7 +16,6 @@ exports.createBook = catchAsyncErrors(async (req, res, next) => {
     category,
     coverImageUrl,
     url,
-    publicationDate,
     
   } = req.body;
   const author = req.user._id;
@@ -49,7 +48,6 @@ exports.createBook = catchAsyncErrors(async (req, res, next) => {
     keywords,
     coverImageUrl,
     url,
-    publicationDate,
   });
 
   // Handle any additional logic (e.g., sending notifications, updating statistics)
@@ -237,8 +235,10 @@ return res.status(200).json({book , success:true});
 
 
 
+exports.getAllBookForAuthor = catchAsyncErrors(async (req, res, next) => {
+       const {id} = req.user;
+       const Books = await Book.find({author:id});
+       
+       return res.status(200).json({Books , success:true});
 
-
-
-
- 
+})

@@ -11,7 +11,7 @@ const Book = require("../model/book");
 
 exports.uploadBook = catchAsyncErrors(async (req, res, next) => {
 
-  const key = `/all-books/${req.user.userId}/${Date.now()}/pdf-${Date.now()}.pdf`;
+  const key = `all-books/${req.user.userId}/${Date.now()}/pdf-${Date.now()}.pdf`;
 
   const expiresInSeconds = 3600;
 
@@ -33,7 +33,7 @@ exports.uploadBookCover = catchAsyncErrors(async (req, res, next) => {
 
   const fileExtension = contentType.split("/")[1];
   
-  const key = `/all-books/${req.user.userId}/book-cover/cover-${Date.now()}.${fileExtension}`;
+  const key = `all-books/${req.user.userId}/book-cover/cover-${Date.now()}.${fileExtension}`;
 
   const expiresInSeconds = 900;
 
@@ -56,7 +56,7 @@ exports.uploadProfilePic = catchAsyncErrors(async (req, res, next) => {
 
   const fileExtension = contentType.split("/")[1];
   
-  const key = `/all-books/${req.user.userId}/profile/profile-${Date.now()}.${fileExtension}`;
+  const key = `all-books/${req.user.userId}/profile/profile.${fileExtension}`;
 
   const expiresInSeconds = 900;
 
@@ -79,7 +79,7 @@ exports.uploadProfileCoverPic = catchAsyncErrors(async (req, res, next) => {
 
   const fileExtension = contentType.split("/")[1];
   
-  const key = `/all-books/${req.user.userId}/profile/cover-${Date.now()}.${fileExtension}`;
+  const key = `all-books/${req.user.userId}/profile/cover-${Date.now()}.${fileExtension}`;
 
   const expiresInSeconds = 900;
 

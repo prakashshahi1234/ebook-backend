@@ -5,7 +5,7 @@ const s3Client = require("../config/awsS3");
 async function fileUpload(key , contentType , expiresInSeconds){
     
     const command = new PutObjectCommand({
-        Bucket: "ebook-nepal",
+        Bucket: "ebook-nepal-1",
         Key: key,
         ContentType:contentType, // Replace with your desired content type
       });
@@ -20,7 +20,7 @@ async function fileUpload(key , contentType , expiresInSeconds){
  async function loadFile(key  ,  expiresInSeconds){
 
     const command = new GetObjectCommand({
-        Bucket: "ebook-nepal",
+        Bucket: "ebook-nepal-1",
         Key: key,
       });
     

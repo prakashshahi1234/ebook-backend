@@ -38,12 +38,12 @@ const bookSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Fiction', 'Non-Fiction', 'Science Fiction', 'Mystery', 'Romance', /* add more categories */],
+    enum: ['fiction', 'non-fiction', 'science-fiction', 'mystery', 'romance', /* add more categories */],
   },
   
   publicationDate: {
     type: Date,
-    required: true,
+    
   },
   coverImageUrl: {
     type: String,

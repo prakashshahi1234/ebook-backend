@@ -78,7 +78,7 @@ const userSchema = new mongoose.Schema({
  
   
 
-  profileImage: {
+  profileImageUrl: {
     type: String,
     validate: {
       validator: function (v) {

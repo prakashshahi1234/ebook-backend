@@ -144,15 +144,13 @@ exports.verifyEmail = catchAsyncErrors(async (req, res, next) => {
 exports.getAccessToken = catchAsyncErrors(async (req, res, next) => {
   let { refreshToken } = req.cookies;
   if (!refreshToken) refreshToken = req.headers.refreshtoken;
-
   if (!refreshToken) {
     return next(new ErrorHander("Invalild Request ", 401));
   }
 
   const decodedData = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-
+  //  console.log(decodedData)
   const user = await User.findById(decodedData.id);
-
   if (!user) return next(new ErrorHander("Invalid Request || User Not Found."));
 
   const accessToken = user.getAccessToken();
