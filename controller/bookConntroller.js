@@ -3,21 +3,13 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const Book = require("../model/book");
 const { v4: uuidv4 } = require("uuid");
 const User = require("../model/user");
-const ApiFeatures = require("../utils/apiFeature")
+const ApiFeatures = require("../utils/apiFeature");
 
 // Create Book
 exports.createBook = catchAsyncErrors(async (req, res, next) => {
   // Extract necessary data from the request body
-  const {
-    title,
-    description,
-    price,
-    keywords,
-    category,
-    coverImageUrl,
-    url,
-    
-  } = req.body;
+  const { title, description, price, keywords, category, coverImageUrl, url } =
+    req.body;
   const author = req.user._id;
   // Additional validation if needed
 
@@ -34,7 +26,6 @@ exports.createBook = catchAsyncErrors(async (req, res, next) => {
     if (!existingBook) {
       isUniqueId = true;
     }
-
   }
 
   // Create a new book
@@ -57,7 +48,6 @@ exports.createBook = catchAsyncErrors(async (req, res, next) => {
     success: true,
     book,
   });
-
 });
 
 // Update Book (update book if the author is same)
@@ -66,32 +56,25 @@ exports.updateBook = catchAsyncErrors(async (req, res, next) => {
   const { bookId } = req.params;
 
   // Extract updated data from the request body
-  const {  
-    title,
-    description,
-    price,
-    keywords,
-    category,
-    coverImageUrl,
-    publicationDate
-    ,} = req.body;
+  const { title, description, price, keywords, category, coverImageUrl } =
+    req.body;
 
   // Find the book by ID and author ID
   const book = await Book.findOne({ bookId, author: req.user.id });
 
   if (!book) {
-    return next(new ErrorHander('Book not found or unauthorized to update.', 404));
+    return next(
+      new ErrorHander("Book not found or unauthorized to update.", 404)
+    );
   }
 
-
   // Update the book properties
-  book.title       = title || book.title;       
-  book.description = description ||book.description;
-  book.price  = price || book.price ;
-  book.keywords = keywords ||  book.keywords;
+  book.title = title || book.title;
+  book.description = description || book.description;
+  book.price = price || book.price;
+  book.keywords = keywords || book.keywords;
   book.category = category || book.category;
-  book.coverImageUrl  = coverImageUrl || book.category;
-  book.publicationDate = publicationDate || book.publicationDate;
+  book.coverImageUrl = coverImageUrl || book.category;
 
   // Other book properties to update
 
@@ -103,99 +86,104 @@ exports.updateBook = catchAsyncErrors(async (req, res, next) => {
     success: true,
     book,
   });
-
 });
 
-
-// exports.getBookForUserChoices = catchAsyncErrors(async (req, res, next) => {
-
-//   const { categories, page = 1, pageSize = 10 } = req.body; // ask to set the category.
-
-//   // Calculate the number of documents to skip based on the page and pageSize
-//   const skip = (page - 1) * pageSize;
-
-//   // Find books matching the specified categories with pagination
-//   let books = await Book.find({
-//     category: { $in: categories },
-//     isSuspended: { suspended: false },
-//     isDeleted: { deleted: false },
-//     unPublished: false
-//   })  
-//     .skip(skip)
-//     .limit(pageSize);
-
-
-//   // If there are less than pageSize matching books, fetch additional books
-//   if (books.length < pageSize) {
-//     const additionalBooks = await Book.find({
-//       isSuspended: { suspended: false },
-//       isDeleted: { deleted: false },
-//       unPublished: false
-//     })
-//       .skip(skip + books.length)
-//       .limit(pageSize - books.length);
-
-//     books = [...books, ...additionalBooks];
-//   }
-
-//   return res.status(200).json({
-//     books
-//   });
-// });
-
-
-
+//  initial book card serving
 exports.getBookForUserChoices = catchAsyncErrors(async (req, res, next) => {
-  const { categories, page = 1, pageSize = 10 } = req.body;
+
+  const { categories=[], page = 1, pageSize = 10 } = req.body;
 
   // Calculate the number of documents to skip based on the page and pageSize
   const skip = (page - 1) * pageSize;
-
-  // Use aggregation to calculate average rating
-  const books = await Book.aggregate([
+  
+  // Find books matching the specified categories with pagination
+  let books = await Book.aggregate([
     {
       $match: {
         category: { $in: categories },
-        isSuspended: { suspended: false },
-        isDeleted: { deleted: false },
-        unPublished: false,
-      },
-    },
-    {
-      $skip: skip,
-    },
-    {
-      $limit: pageSize,
+        "isSuspended.suspended": false,
+        "isDeleted.deleted": false,
+        unPublished: false
+      }
     },
     {
       $lookup: {
-        from: 'ratings',
-        localField: '_id',
-        foreignField: 'bookId',
-        as: 'ratings',
+        from: "users", // Assuming the user details are stored in the "users" collection
+        localField: "author",
+        foreignField: "_id",
+        as: "authorDetails"
       }
-    }
-,    
+    },
     {
-      $addFields: {
-        avgRating: {
-          $avg: '$ratings.rating',
-        },
-        totalRatings: {
-          $size: '$ratings',
-        },
-      },
+      $unwind: "$authorDetails" // Unwind to get a single author detail
     },
     {
       $project: {
-        ratings: 0, // Exclude the ratings field
+        title: 1,
+        coverImageUrl:1,
+        url:1,
+        price:1,
+        createdAt:1,
+        bookId:1,
+        // Add other fields you want to include in the result
+        author: {
+          _id: "$authorDetails._id",
+          name: "$authorDetails.name",
+          // Include other author details you want
+        }
+      }
+    }
+  ])
+    .skip(skip)
+    .limit(pageSize);
+  
+  // If there are less than pageSize matching books, fetch additional books
+  if (books.length < pageSize) {
+    const additionalBooks = await Book.aggregate([
+      {
+        $match: {
+          "isSuspended.suspended": false,
+          "isDeleted.deleted": false,
+          unPublished: false
+        }
       },
-    },
-  ]);
-
+      {
+        $lookup: {
+          from: "users",
+          localField: "author",
+          foreignField: "_id",
+          as: "authorDetails"
+        }
+      },
+      {
+        $unwind: "$authorDetails"
+      },
+      {
+        $project: {
+          title: 1,
+          title: 1,
+          coverImageUrl:1,
+          url:1,
+          price:1,
+          createdAt:1,
+          bookId:1,
+          author: {
+            _id: "$authorDetails._id",
+            name: "$authorDetails.name"
+            // Include other author details you want
+          }
+        }
+      }
+    ])
+      .skip(skip + books.length)
+      .limit(pageSize - books.length);
+    books = [...books, ...additionalBooks];
+  }
+  
   return res.status(200).json({
-    books,
+    books
   });
+  
 });
 
 
@@ -216,29 +204,80 @@ exports.searchBooks = catchAsyncErrors(async (req, res, next) => {
     count: books.length,
     books,
   });
-
 });
 
 
 exports.getBookById = catchAsyncErrors(async (req, res, next) => {
+  const book = await Book.aggregate([
+    {
+      $match: { bookId: req.params.bookId }
+    },
+    {
+      $lookup: {
+        from: "users", // Assuming the user details are stored in the "users" collection
+        localField: "author",
+        foreignField: "_id",
+        as: "authorDetails"
+      }
+    },
+    {
+      $unwind: "$authorDetails"
+    },
+    {
+      $project: {
+        title: 1,
+        title: 1,
+        coverImageUrl:1,
+        url:1,
+        price:1,
+        createdAt:1,
+        bookId:1,
+        description:1,
+        // Add other book details you want to include
+        author: {
+          _id: "$authorDetails._id",
+          name: "$authorDetails.name",
+          // Include other author details you want
+        }
+      }
+    }
+  ]);
 
-  const book = await Book.findOne({bookId:req.params.bookId});
+  if (!book || book.length === 0) {
+    return next(new ErrorHander("Book not found", 404));
+  }
 
-if(!book){
-  return next(new ErrorHander("Book not found", 404));
-}
-
-return res.status(200).json({book , success:true});
-
-
-})
+  return res.status(200).json({ book: book[0], success: true });
+});
 
 
+
+
+exports.deleteBook = catchAsyncErrors(async (req, res, next) => {
+  const book = await Book.findOneAndUpdate(
+    { bookId: req.params.bookId, author: req.user.id },
+    { "isDeleted.deleted": true }
+  );
+
+  return res.status(200).json({ success: true });
+
+  console.log(book);
+});
+
+exports.unpublishBook = catchAsyncErrors(async (req, res, next) => {
+  const book = await Book.findOneAndUpdate(
+    { bookId: req.params.bookId, author: req.user.id },
+    { unPublished: true }
+  );
+
+  return res.status(200).json({ success: true });
+
+  console.log(book);
+});
 
 exports.getAllBookForAuthor = catchAsyncErrors(async (req, res, next) => {
-       const {id} = req.user;
-       const Books = await Book.find({author:id});
-       
-       return res.status(200).json({Books , success:true});
+  const { id } = req.user;
+  const Books = await Book.find({ author: id });
 
-})
+  return res.status(200).json({ Books, success: true });
+});

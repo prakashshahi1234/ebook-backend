@@ -60,7 +60,7 @@ const bookSchema = new mongoose.Schema({
       ref: "User",
     },
     deleted:{type:Boolean , default:false},
-    
+    deletedAt:{default:Date.now() , type:Date}
   },
  isSuspended:{
     suspended:{type:Boolean, default:false},

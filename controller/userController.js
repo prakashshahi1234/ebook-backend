@@ -61,6 +61,9 @@ exports.registerWithGoogleAccount = catchAsyncErrors(async (req, res, next) => {
 
 // Registration of User (email , password)
 exports.registerUser = catchAsyncErrors(async (req, res, next) => {
+ 
+  console.log("request comming")
+
   const { email, password, googleToken, name } = req.body;
   console.log(req.body);
   if (!password && !googleToken) {
@@ -89,13 +92,15 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
 
   // email verify token
   const token = user.getToken();
+  const otp = user.getOtp()
 
   await user.save({ validateBeforeSave: false });
+
 
   const mailOptions = {
     email,
     subject: "Ebook Email Verification",
-    message: `${process.env.CLIENT_URL}/verify-email/${token}`,
+    message: `your verification otp is ${otp} , if you are using web click ${process.env.CLIENT_URL}/verify-email/${token}`,
   };
 
   sendEmail(mailOptions);
@@ -109,18 +114,42 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
 
 // verification of email paramas : (verify token)
 exports.verifyEmail = catchAsyncErrors(async (req, res, next) => {
+
+
+  const {token} = req.params
+
+
+  let user ;
+
+  // token hanfle
+  if(!isFinite(token)){
+
+    console.log("called")
   // creating token hash
   const emailVerifyToken = crypto
     .createHash("sha256")
     .update(req.params.token)
     .digest("hex");
 
-  const user = await User.findOne({
+   user = await User.findOne({
     verify_token: emailVerifyToken,
     validation_link_expire: { $gt: Date.now() },
   });
+}
 
-  if (!user) {
+// otp handle
+if(isFinite(token)){
+  // creating token hash
+
+   user = await User.findOne({
+    otp:token,
+    validation_link_expire: { $gt: Date.now() },
+  });
+
+}
+
+
+if (!user) {
     return next(new ErrorHander("Invalid Request.", 400));
   }
 
@@ -133,12 +162,15 @@ exports.verifyEmail = catchAsyncErrors(async (req, res, next) => {
   }
 
   user.email_verified = true;
+  user.otp = undefined
   user.verify_token = null;
   user.validation_link_expire = null;
   await user.save();
 
   sendToken(user, 200, res);
+
 });
+
 // exports.me
 // get access token
 exports.getAccessToken = catchAsyncErrors(async (req, res, next) => {
@@ -172,11 +204,10 @@ exports.getAccessToken = catchAsyncErrors(async (req, res, next) => {
 // user login (email ,password)
 exports.login = catchAsyncErrors(async (req, res, next) => {
   const { email, password, googleToken } = req.body;
-
+    
   if (!password && !googleToken) {
     return next(new ErrorHander("Invalid Password", 400));
   }
-
   const user = await User.findOne({ email }).select("+password");
 
   if (!user) {
@@ -189,20 +220,21 @@ exports.login = catchAsyncErrors(async (req, res, next) => {
   }
 
   const isPasswordMatched = await user.comparePassword(password);
-
+ 
   if (!isPasswordMatched) {
-    return next(new ErrorHander("Invalid email or password", 401));
+    return next(new ErrorHander("Invalid email or password.", 403));
   }
   if (user.isSuspended.suspended) {
-    return next(new ErrorHander("Your account is suspended", 401));
+    return next(new ErrorHander("Your account is suspended.", 403));
   }
 
   if (user.isDeleted.deleted) {
-    return next(new ErrorHander("Your account is deleted", 401));
+    return next(new ErrorHander("Your account is deleted.", 403));
   }
   if (user.email_verified === false) {
-    return next(new ErrorHander("Please verify your email", 401));
+    return next(new ErrorHander("Please verify your email.", 403));
   }
+
   sendToken(user, 200, res);
 });
 
@@ -233,15 +265,22 @@ exports.forgetPassword = catchAsyncErrors(async (req, res, next) => {
   const user = await User.findOne({ email });
 
   if (!user) {
+
     return next(new ErrorHander("Invalid email.", 400));
+
   }
 
-  const token = user.getToken(); // generate token for any kind of verification
+    // generate token for any kind of verification
 
+  const token = user.getToken(); 
+  const otp = user.getOtp()
+
+  console.log(otp)
   const mailOptions = {
     email,
     subject: "Password Reset",
-    message: `${process.env.CLIENT_URL}/forget-password/${token}`,
+    message: `if you are using app use ${otp} and if you are using website then click  ${process.env.CLIENT_URL}/forget-password/${token}`,
+    
   };
 
   sendEmail(mailOptions);
@@ -250,22 +289,60 @@ exports.forgetPassword = catchAsyncErrors(async (req, res, next) => {
 
   return res
     .status(200)
-    .json({ message: `Email sent to ${email}`, success: true });
+    .json({ message: `Email sent to ${email}`, success: true , email});
 });
+
+
+exports.checkOtpforMobile = catchAsyncErrors(async(req, res, next)=>{
+  
+  const {otp , email} = req.body
+
+  const user = await User.findOne({email , otp ,  validation_link_expire: { $gt: Date.now() },})
+ 
+  if(user) {
+
+    return res.status(200).json({message:"change your password.", email})
+
+  }
+
+  return next(new ErrorHander("invalid request" , 403))
+
+})
+
 
 // reset password
 exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
-  const { token } = req.params;
+  
+  const { token  } = req.params;
+
   const { password, confirmPassword } = req.body;
+
+  let user;
+
+  if(!isFinite(token)){
+   console.log("called1")
   const emailVerifyToken = crypto
     .createHash("sha256")
     .update(token)
     .digest("hex");
 
-  const user = await User.findOne({
+   user = await User.findOne({
     verify_token: emailVerifyToken,
     validation_link_expire: { $gt: Date.now() },
   });
+  }
+
+  if(isFinite(token)){
+ 
+   
+
+    user = await User.findOne({
+      otp:token,
+      validation_link_expire: { $gt: Date.now() },
+    });
+  
+
+  }
 
   if (!user) {
     return next(new ErrorHander("Invalid Request.", 400));
@@ -282,16 +359,18 @@ exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
   if (user.isDeleted.deleted) {
     return next(new ErrorHander("Your account is deleted", 401));
   }
-  confirmPassword;
 
   user.password = req.body.password;
+  user.otp = undefined
   user.verify_token = undefined;
   user.validation_link_expire = undefined;
 
   await user.save();
-
+  
   sendToken(user, 200, res);
+
 });
+
 
 // update User password (password , newPassword , confirmPassword)
 exports.updatePassword = catchAsyncErrors(async (req, res, next) => {
@@ -337,11 +416,15 @@ exports.updateUserRole = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
+
+
 // get details of user self.
 exports.me = catchAsyncErrors(async (req, res, next) => {
   const user = req.user;
   return res.status(200).json({ success: true, user });
 });
+
+
 
 // Get single user (admin)same-origin
 exports.getSingleUser = catchAsyncErrors(async (req, res, next) => {

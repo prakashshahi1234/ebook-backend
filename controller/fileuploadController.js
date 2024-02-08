@@ -93,23 +93,29 @@ exports.uploadProfileCoverPic = catchAsyncErrors(async (req, res, next) => {
 exports.loadBook = catchAsyncErrors(async(req, res, next)=>{
 
   const {id} = req.user;
-  const {bookId} = req.params;
-  const {key} = req.query;
 
-  console.log(key);
-  const isBought = await Purchase.findOne({bookId , userId:id , "status.status":"completed"});
-  const isAuthor = await Book.findOne({bookId,author:id});
-  if(!isBought && !isAuthor){
+  // this is mongo db id,
+  const {bookId} = req.params;
+    
+  const isBought = await Purchase.findOne({userId:id , bookId})
+
+  const isAuthor = await Book.findOne({_id:bookId,author:id});
+
+  if( !isAuthor && isBought?.status?.status!=="completed"){
     
     return next(new ErrorHandler("You are not allowed to load this book" , 401))
   
   }
-  
 
-  const expiresIn = 600
+  const book =await Book.findById(bookId).select("url")
+   
+  let expiresIn = 600;
 
-  const url = await loadFile(key , expiresIn );
+  if(isAuthor) expiresIn = 3600;  
 
+
+  const url = await loadFile(book.url , expiresIn );
+    
   return res.status(200).json({url , success:true});
 
 }

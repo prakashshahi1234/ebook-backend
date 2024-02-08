@@ -17,7 +17,7 @@ const purchase = new mongoose.Schema({
     ref:"payment",
   },
   status:{
-    status:{type:String , default:"pending" ,enum:["completed" ,"pending" ],require:true},
+    status:{type:String , default:"completed" ,enum:["completed" ,"pending" ],require:true},
     message:{type:String ,require:true}
   }
 
@@ -25,4 +25,5 @@ const purchase = new mongoose.Schema({
 
 purchase.index({ bookId: 1, userId: 1 , paymentId:1 }, { unique: true });
 
-module.exports = mongoose.model("purchase" , purchase)
+const Purchase = mongoose.model("Purchase" , purchase)
+module.exports  = Purchase

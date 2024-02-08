@@ -1,32 +1,31 @@
-const crypto = require("crypto")
-// for esewa payment
-exports.getSignature = function(message){ 
+var crypto = require("crypto");
 
-    const secret = process.env.ESEWA_SECRET;
-    
-    const hmac = crypto.createHmac('sha256', secret);
-    
-    hmac.update(message);
-    
-    const hashInBase64 = hmac.digest('base64');
-    
-    return hashInBase64;
-    
-    }
+function getSignature  (message) {
+  const secret = process.env.ESEWA_SECRET; //different in production
+  // Create an HMAC-SHA256 hash
+  const hmac = crypto.createHmac("sha256", secret);
+  hmac.update(message);
 
+  // Get the digest in base64 format
+  const hashInBase64 = hmac.digest("base64");
 
-    exports.verifySignature = function(message, receivedHash) {
+  return hashInBase64;
+};
 
-        const secret = process.env.ESEWA_SECRET;
-      
-        const hmac = crypto.createHmac('sha256', secret);
-        hmac.update(message);
-      
-        const expectedHash = hmac.digest('base64');
+function verifySignature  (decodedData) {
 
-        // Compare the expectedHash with the receivedHash
-        return expectedHash === receivedHash;
+  const message = decodedData.signed_field_names
+    .split(",")
+    .map((field) => `${field}=${decodedData[field] || ""}`)
+    .join(",");
 
-      };
+  console.log(message);
 
+  const signature = getSignature(message);
 
+  // Compare the expectedHash with the receivedHash
+  return signature === decodedData.signature;
+
+};
+
+module.exports ={getSignature , verifySignature}

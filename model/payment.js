@@ -12,7 +12,7 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum:['esewa','khalti' ,'card']
+    enum:['ESEWA','KHALTI' ,'CARD']
     // Define any specific properties or constraints for the 'paymentMethod' field
   },
   status: {

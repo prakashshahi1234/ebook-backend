@@ -1,7 +1,7 @@
 const express = require("express");
 const {
   registerUser, verifyEmail, login, forgetPassword, resetPassword, updatePassword, getSingleUser, updateUserRole, updateUser, deleteUser, logout, getRefreshToken, getAccessToken, addToLibrary, me,  
-registerWithGoogleAccount ,  submitIdentity
+registerWithGoogleAccount ,  submitIdentity, checkOtpforMobile
 } = require("../controller/userController");
 
 const {isAuthenticatedUser, authorizeRoles} = require("../middleware/auth")
@@ -12,6 +12,7 @@ router.route("/register").post(registerUser);
 router.route("/email-verify/:token").get(verifyEmail);
 router.route("/login").post(login);
 router.route("/forget-password").post(forgetPassword);
+router.route("/check-otp").post(checkOtpforMobile)
 router.route("/reset-password/:token").put(resetPassword);
 router.route("/me").get(isAuthenticatedUser,me)
 router.route("/update-password").post(isAuthenticatedUser,updatePassword)

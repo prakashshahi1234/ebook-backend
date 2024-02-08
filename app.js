@@ -15,11 +15,12 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const configCors = {
-    origin: [`http://localhost:30001`, 'http://localhost:3000'],
+    origin: [`http://localhost:30001`, 'http://localhost:3000', "http://192.168.1.74:8081"],
     credentials: true
   }
   
 app.use(cors(configCors))
+
 // Route Imports
 const user = require("./routes/userRoute");
 const book = require("./routes/bookRoute");

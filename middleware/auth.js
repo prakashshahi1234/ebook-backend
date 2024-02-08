@@ -4,18 +4,61 @@ const jwt = require("jsonwebtoken");
 const User = require("../model/user");
 
 exports.isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
-
-  const { accessToken } = req.cookies;
-   console.log(accessToken)
-  if (!accessToken) {
-    return next(new ErrorHander("Please Login to access this resource", 401));
+     
+  let { accessToken , refreshToken} = req.cookies ;
+  //  console.log(req.headers.authorization)
+  if(!accessToken && !refreshToken && req.headers.authorization  ){
+       accessToken =  JSON.parse(req.headers?.authorization)?.accessToken
+       refreshToken =  JSON.parse(req.headers?.authorization)?.refreshToken
   }
   
-  const decodedData = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
-   
-  req.user = await User.findById(decodedData.id);
+     
+  if (!accessToken) {
 
-  next();
+    if(refreshToken){
+
+      const decodedData = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+      const user = await User.findById(decodedData.id);
+     
+      if (!user) return next(new ErrorHander("Invalid Request || User Not Found."));
+    
+      const newAccessToken = user.getAccessToken();
+    
+      const accessOption = {
+        expires: new Date(
+          Date.now() + process.env.JWT_ACCESS_EXPIRE * 24 * 60 * 60 * 1000
+        ),
+        httpOnly: true,
+        secure: true,
+      };
+
+      req.cookies.accessToken = newAccessToken
+      res.
+      cookie("accessToken", newAccessToken, accessOption)
+
+      req.user = user
+     
+      return next()
+
+    }
+
+    return next(new ErrorHander("Please Login to access this resource", 401));
+ 
+  }
+
+  try {
+    
+    const decodedData = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
+    
+    req.user = await User.findById(decodedData.id);
+    
+    next();
+
+  } catch (error) {
+    console.log(error)
+  }
+
 });
 
 exports.authorizeRoles = (...roles) => {

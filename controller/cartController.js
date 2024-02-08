@@ -14,22 +14,24 @@ exports.addToCart = catchAsyncErrors(async (req, res, next) => {
   if (cart) {
     // Check if the bookId is already in the cart
     if (cart.booksId.includes(bookId)) {
-      return res.status(400).json({ success: false, message: 'Book is already in the cart' });
+      return res
+        .status(200)
+        .json({ success: false,isAlready:true, message: "Book is already in the cart" });
     }
 
     // Add the bookId to the array
     cart.booksId.push(bookId);
     await cart.save();
-    return res.status(200).json({ success: true, message: 'Book added to the cart' });
-
+    return res
+      .status(200)
+      .json({ success: true, message: "Book added to the cart" });
   } else {
-    // Create a new cart item
     const cartItem = new Cart({ userId: id, booksId: [bookId] });
 
-    // Save the cart item to the database
     await cartItem.save();
+    res.status(200).json({ success: true, message: "Book added to the cart" });
 
-    res.status(200).json({ success: true, message: 'Book added to the cart' });
+    // Create a new cart item
   }
 });
 
@@ -39,10 +41,8 @@ exports.addToCart = catchAsyncErrors(async (req, res, next) => {
 
 exports.getCart = catchAsyncErrors(async (req, res, next) => {
     const { id } = req.user;
-
     // Find the user's cart
     const cart = await Cart.findOne({ userId: id }).select("booksId");
-
     // Check if the cart is not found
     if (!cart) {
         return res.status(404).json({ success: false, message: 'Cart not found' });
@@ -50,16 +50,17 @@ exports.getCart = catchAsyncErrors(async (req, res, next) => {
 
     // Fetch detailed book information from the Book model
     const books = await Book.find({ _id: { $in: cart.booksId } })
-        .select("title author price description"); // Add more fields as needed
+        .select("title coverImageUrl price "); // Add more fields as needed
+        console.log(books)
 
     // Return the result
-    res.json({ books, success: true });
+   return res.status(200).json({ books, success: true });
 });
 
 
   
 
-// Delete Cart
+// update Cart
 exports.updateCart = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.user;
   const { bookId } = req.params;
@@ -70,8 +71,8 @@ exports.updateCart = catchAsyncErrors(async (req, res, next) => {
 
 });
 
-
-exports.deleteCart = catchAsyncErrors(async (req, res, next) => {
+// clear cart
+exports.clearCart = catchAsyncErrors(async (req, res, next) => {
 
   const {id} = req.user;
 
