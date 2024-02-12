@@ -27,7 +27,13 @@ const userSchema = new mongoose.Schema(
         "Invalid email address",
       ],
     },
-
+    mobileNo: {
+      type: String,
+      trim: true,
+      match: [
+        /^[0-9]{10}$/i
+      ],
+    },
     role: {
       type: String,
       default: "user",
@@ -53,7 +59,9 @@ const userSchema = new mongoose.Schema(
 
     identityDetail: {
       type: Object,
-      // select:false,
+    },
+    paymentDetail:{
+      type:Object
     },
 
     password: {
@@ -118,6 +126,7 @@ const userSchema = new mongoose.Schema(
       },
       deleted: { type: Boolean, default: false, select: false },
     },
+    
     isSuspended: {
       suspended: { type: Boolean, default: false, select: false },
       suspenededAt: Date,

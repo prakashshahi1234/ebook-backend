@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
+const Book = require("../model/book");
 
 
 // register / login with google account
@@ -568,12 +569,12 @@ exports.removeFromLibrary = catchAsyncErrors(async (req, res, next) => {
 // create identity
 exports.submitIdentity = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.user;
-  const { name ,  country , province , district , municipality , wardNo , toleName , profession   } = req.body;
+  const { name ,  country , province , district , municipality , wardNo , toleName , profession, identityImageUrl   } = req.body;
      
   const user = await User.findById(id);
 
   user.identityDetail ={
-     name , country , province , district , municipality , wardNo , toleName , profession , isVerified:false, isSubmitted:true
+    identityImageUrl, name , country , province , district , municipality , wardNo , toleName , profession , isVerified:false, isSubmitted:true
   }
 
   await user.save();
@@ -587,25 +588,98 @@ exports.submitIdentity = catchAsyncErrors(async (req, res, next) => {
 
 
 // submit payment details
-// exports.setUpPaymentDetails = catchAsyncErrors(async (req, res, next) => {
-//   const { bankName, branch, accontHolderName, accountNumber , isSubitted , isVerified} = req.body;
-//   const { id } = req.user;
-
-//   const user = await User.findById(id);
-//   if (user.identityDetail.isVerified) {
-//     res
-//       .status(401)
-//       .json({ message: "you cannot verify pyment detail before identity. first verify your ientity." });
-//   }
+exports.setUpPaymentDetails = catchAsyncErrors(async (req, res, next) => {
+  const { bankName, branch, accountHolderName, accountNumber } = req.body;
+  const user = req.user;
+  ;
+  if (!(user.identityDetail.isVerified)) {
+    res
+      .status(401)
+      .json({ message: "you cannot verify pyment detail before identity. first verify your ientity." });
+  }
   
-//   user.paymentDetail = {
-//     bankName,
-//     branch,
-//     accontHolderName,
-//     accountNumber,
-//   };
-//   await user.save();
+  user.paymentDetail = {
+    bankName,
+    branch,
+    accountHolderName,
+    accountNumber,
+    isSubmitted:true,
+    isVerified:false
+  };
+  await user.save();
 
-//   return res.status(200).json({ success: true, user });
-// });
+  return res.status(200).json({ success: true, user });
+});
   
+
+exports.searchAuthor = catchAsyncErrors(async(req, res, next)=>{
+
+  const keywords = req.query.keyword.split(/\s+/);
+
+  const usersWithBooks = await User.aggregate([
+    {
+      $lookup: {
+        from: 'books',
+        localField: '_id',
+        foreignField: 'author',
+        as: 'books',
+      },
+    },
+    {
+      $unwind: '$books', // Unwind the books array
+    },
+    {
+      $match: {
+        $and: [
+          { $or: keywords.map(keyword => ({ name: { $regex: keyword, $options: 'i' } })) },
+          { 'books.unPublished': false },
+          { 'books.isDeleted.deleted': false },
+          { 'books.isSuspended.suspended': false },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: '$_id',
+        name: { $first: '$name' },
+        description: { $first: '$description' },
+        profileImageUrl: { $first: '$profileImageUrl' },
+        isVerified: { $first: '$identityDetail.isVerified' },
+        totalBooks: { $sum: 1 }, // Count the books for each user
+      },
+    },
+    {
+      $match: {
+        totalBooks: { $gt: 0 }, // Users with more than one book
+      },
+    },
+  ]);
+  
+  
+ 
+  return res.status(200).json({authors:usersWithBooks , success:"true"})
+})
+
+
+
+
+exports.getAuthorDetails = catchAsyncErrors(async (req, res, next) => {
+  const { id } = req.params;
+
+  // Get author details
+  const author = await User.findOne({ _id: id }).select('userId name description identityDetail.isVerified profileImageUrl');
+
+  if (!author) {
+    return res.status(404).json({ success: false, message: 'Author not found' });
+  }
+
+  // Get published, not suspended, not deleted books by the author
+  const allBooks = await Book.find({
+    author: id,
+    unPublished: false,
+    'isSuspended.suspended': false,
+    'isDeleted.deleted': false,
+  }).select('_id bookId title price coverImageUrl')
+
+  return res.status(200).json({ author, books: allBooks, success: true });
+});

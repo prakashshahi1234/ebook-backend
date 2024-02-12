@@ -1,14 +1,45 @@
 const ErrorHandler = require("../utils/errorhandler");
-const Rating = require("../model/rating");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors")
+const Purchase = require("../model/purchase")
+const Rating = require("../model/rating")
+
+
+// have to be purchased and should not be duplicate
+exports.isValidRating = catchAsyncErrors(async(req, res, next)=>{
+
+  const {reviwe , rating , bookId} = req.body;
+
+  const {id} = req.user;
+
+  const isPurchased = await Purchase.findOne({bookId, userId:id}) 
+
+  if(!isPurchased){
+
+    return next(new ErrorHandler("you donot have purchased.", 401))
+
+  }
+  const isDuplicate = await Rating.findOne({bookId , userId:id})
+
+  if(isDuplicate){
+
+    return next(new ErrorHandler("Already reviewed." , 401))
+
+  }
+
+  next()
+  
+}) 
 
 exports.createRating = catchAsyncErrors(async(req , res, next)=>{
 
     const {review , rating , bookId} = req.body;
+
     const {id:userId} = req.user;
 
-    if(!review || !rating || !bookId){
+    if(!rating || !bookId){
+
         return next(new ErrorHandler("Invalid Request" , 401));
+
     }
 
     const ratingX = await Rating.create({review , rating , bookId , userId});
@@ -56,6 +87,7 @@ exports.getRating = catchAsyncErrors(async (req, res, next) => {
 exports.updateRating = catchAsyncErrors(async(req , res, next)=>{
 
     const {review , rating , bookId} = req.body;
+    
     const {id:userId} = req.user;
 
     if(!review || !rating || !bookId){

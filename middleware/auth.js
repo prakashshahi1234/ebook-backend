@@ -43,8 +43,8 @@ exports.isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
 
     }
 
-    return next(new ErrorHander("Please Login to access this resource", 401));
- 
+    return res.status(401).json({redirectUri:`${process.env.CLIENT_URL}/login`})
+    
   }
 
   try {

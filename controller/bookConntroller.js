@@ -187,18 +187,17 @@ exports.getBookForUserChoices = catchAsyncErrors(async (req, res, next) => {
 });
 
 
-// search books
+// Search books
 exports.searchBooks = catchAsyncErrors(async (req, res, next) => {
-  const resultPerPage = 10; // You can adjust this value based on your requirements
-  const query = Book.find(); // Replace with your actual model
+  console.log(req.query)
 
-  const apiFeatures = new ApiFeatures(query, req.query)
-    .search()
-    .filter()
-    .pagination(resultPerPage);
+  const resultPerPage = 10; 
+
+  const query = Book.find(); 
+
+  const apiFeatures = new ApiFeatures(query, req.query).search().filter().sort().pagination(resultPerPage);
 
   const books = await apiFeatures.query;
-
   return res.status(200).json({
     success: true,
     count: books.length,
@@ -207,77 +206,53 @@ exports.searchBooks = catchAsyncErrors(async (req, res, next) => {
 });
 
 
-exports.getBookById = catchAsyncErrors(async (req, res, next) => {
-  const book = await Book.aggregate([
-    {
-      $match: { bookId: req.params.bookId }
-    },
-    {
-      $lookup: {
-        from: "users", // Assuming the user details are stored in the "users" collection
-        localField: "author",
-        foreignField: "_id",
-        as: "authorDetails"
-      }
-    },
-    {
-      $unwind: "$authorDetails"
-    },
-    {
-      $project: {
-        title: 1,
-        title: 1,
-        coverImageUrl:1,
-        url:1,
-        price:1,
-        createdAt:1,
-        bookId:1,
-        description:1,
-        // Add other book details you want to include
-        author: {
-          _id: "$authorDetails._id",
-          name: "$authorDetails.name",
-          // Include other author details you want
-        }
-      }
-    }
-  ]);
 
+exports.getBookById = catchAsyncErrors(async (req, res, next) => {
+  
+  const book = await Book.findById(req.params.bookId).select('title coverImageUrl url price _createdAt bookId description author').populate({
+    path: 'author',
+    model: 'User', // Replace with the actual model name for the authors
+    select: '_id name', // Include other fields you want
+  });
+  console.log(book)
   if (!book || book.length === 0) {
     return next(new ErrorHander("Book not found", 404));
   }
 
-  return res.status(200).json({ book: book[0], success: true });
+  return res.status(200).json({ book, success: true });
 });
 
 
 
 
 exports.deleteBook = catchAsyncErrors(async (req, res, next) => {
-  const book = await Book.findOneAndUpdate(
-    { bookId: req.params.bookId, author: req.user.id },
-    { "isDeleted.deleted": true }
-  );
+
+  await Book.findOneAndUpdate( { bookId: req.params.bookId, author: req.user.id },[{$set:{"isDeleted.deleted":{$eq:[false,"$isDeleted.deleted"]}}}]);
 
   return res.status(200).json({ success: true });
 
-  console.log(book);
+
 });
 
 exports.unpublishBook = catchAsyncErrors(async (req, res, next) => {
-  const book = await Book.findOneAndUpdate(
-    { bookId: req.params.bookId, author: req.user.id },
-    { unPublished: true }
-  );
+  
+  await Book.findOneAndUpdate(
+    { bookId: req.params.bookId, author: req.user.id}
+    ,[{$set:{unPublished:{$eq:[false,"$unPublished"]}}}]
+    );
+
 
   return res.status(200).json({ success: true });
-
-  console.log(book);
 });
 
+
+
 exports.getAllBookForAuthor = catchAsyncErrors(async (req, res, next) => {
+  
   const { id } = req.user;
+
   const Books = await Book.find({ author: id });
 
   return res.status(200).json({ Books, success: true });
+
 });

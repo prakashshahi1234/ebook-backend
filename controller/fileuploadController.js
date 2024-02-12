@@ -66,6 +66,27 @@ exports.uploadProfilePic = catchAsyncErrors(async (req, res, next) => {
   
 });
 
+exports.uploadIdentityImage = catchAsyncErrors(async (req, res, next) => {
+
+  const {contentType} = req.query;
+
+  if(contentType !== "image/png" && contentType !=='image/jpeg' && contentType !== 'image/jpg'){
+
+    return next(new ErrorHandler(`File type :${contentType} is not supported` , 401))
+
+  }
+
+  const fileExtension = contentType.split("/")[1];
+  
+  const key = `all-books/${req.user.userId}/identity/identity.${fileExtension}`;
+
+  const expiresInSeconds = 900;
+
+  const url = await fileUpload(key , contentType , expiresInSeconds)
+
+  return  res.status(200).json({url , success:true});
+  
+});
 
 exports.uploadProfileCoverPic = catchAsyncErrors(async (req, res, next) => {
 

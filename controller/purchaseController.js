@@ -114,7 +114,8 @@ exports.getPurchasedBook = catchAsyncErrors(async(req , res ,next)=>{
   
   if(!purchases || purchases.length<1){
 
-   return next(new ErrorHandler("Empty purchase list", 401))
+    return res.status(200).json({books:[], success:true})
+
 
   }
 

@@ -15,8 +15,9 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const configCors = {
-    origin: [`http://localhost:30001`, 'http://localhost:3000', "http://192.168.1.74:8081"],
-    credentials: true
+    origin: [`http://localhost:3002`, 'https://backend-lovat-beta.vercel.app','http://localhost:3000', "http://192.168.1.74:8081"],
+    credentials: true,
+    
   }
   
 app.use(cors(configCors))
