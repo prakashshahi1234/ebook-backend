@@ -3,14 +3,22 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors"); // Import yo
 const User = require("../model/user"); // Import your User model
 const Cart = require("../model/cart"); // Import your Cart model
 const Book = require("../model/book");
-
+const Purchased = require("../model/purchase"); 
+const Purchase = require("../model/purchase");
 exports.addToCart = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.user;
   const { bookId } = req.params;
 
+  const purchased =await Purchased.findOne({userId:id, bookId})
+  
+  if(purchased){
+    return res
+    .status(200)
+    .json({ success: false,isAlready:true, message: "You already purchased this book. Go to your profile to read." });
+  }
+
   // Find the user's cart
   const cart = await Cart.findOne({ userId: id });
-
   if (cart) {
     // Check if the bookId is already in the cart
     if (cart.booksId.includes(bookId)) {
@@ -41,6 +49,7 @@ exports.addToCart = catchAsyncErrors(async (req, res, next) => {
 
 exports.getCart = catchAsyncErrors(async (req, res, next) => {
     const { id } = req.user;
+        
     // Find the user's cart
     const cart = await Cart.findOne({ userId: id }).select("booksId");
     // Check if the cart is not found

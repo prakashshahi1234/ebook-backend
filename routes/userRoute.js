@@ -1,7 +1,7 @@
 const express = require("express");
 const {
   registerUser, verifyEmail, login, forgetPassword, resetPassword, updatePassword, getSingleUser, updateUserRole, updateUser, deleteUser, logout, getRefreshToken, getAccessToken, addToLibrary, me,  
-registerWithGoogleAccount ,  submitIdentity, checkOtpforMobile, searchAuthor, getAuthorDetails, setUpPaymentDetails
+registerWithGoogleAccount ,  submitIdentity, checkOtpforMobile, searchAuthor, getAuthorDetails, setUpPaymentDetails, getIdentity, updateIdentity, getPaymentDetail, updatePaymentDetail, updateBookByAdmin, updateUserByAdmin
 } = require("../controller/userController");
 
 const {isAuthenticatedUser, authorizeRoles} = require("../middleware/auth")
@@ -33,5 +33,18 @@ router.route("/admin/user/:id")
 .delete(isAuthenticatedUser , authorizeRoles("admin") , deleteUser)
 
 
+// admin route
+router.route("/verification")
+.get(isAuthenticatedUser, authorizeRoles("admin", 'officer' , 'customercare'), getIdentity)
+router.route("/get-payment-detail")
+.get(isAuthenticatedUser, authorizeRoles("admin", 'officer' , 'customercare'), getPaymentDetail)
+
+
+router.route('/update-identity/:id')
+.post(isAuthenticatedUser , authorizeRoles("officer", 'admin'), updateIdentity)
+router.route('/update-payment-detail/:id')
+.post(isAuthenticatedUser , authorizeRoles("officer", 'admin'), updatePaymentDetail)
+router.route("/update-book/:id").post(isAuthenticatedUser, authorizeRoles("officer", 'admin'),updateBookByAdmin)
+router.route("/update-user-by-admin/:id").post(isAuthenticatedUser, authorizeRoles("officer", 'admin'),updateUserByAdmin)
 
 module.exports = router;

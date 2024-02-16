@@ -4,6 +4,7 @@ const Book = require("../model/book");
 const { v4: uuidv4 } = require("uuid");
 const User = require("../model/user");
 const ApiFeatures = require("../utils/apiFeature");
+const { default: mongoose } = require("mongoose");
 
 // Create Book
 exports.createBook = catchAsyncErrors(async (req, res, next) => {
@@ -59,7 +60,7 @@ exports.updateBook = catchAsyncErrors(async (req, res, next) => {
   const { title, description, price, keywords, category, coverImageUrl } =
     req.body;
 
-  // Find the book by ID and author ID
+    // Find the book by ID and author ID
   const book = await Book.findOne({ bookId, author: req.user.id });
 
   if (!book) {
@@ -71,7 +72,7 @@ exports.updateBook = catchAsyncErrors(async (req, res, next) => {
   // Update the book properties
   book.title = title || book.title;
   book.description = description || book.description;
-  book.price = price || book.price;
+  book.price = price;
   book.keywords = keywords || book.keywords;
   book.category = category || book.category;
   book.coverImageUrl = coverImageUrl || book.category;
@@ -108,34 +109,49 @@ exports.getBookForUserChoices = catchAsyncErrors(async (req, res, next) => {
     },
     {
       $lookup: {
-        from: "users", // Assuming the user details are stored in the "users" collection
+        from: "users",
         localField: "author",
         foreignField: "_id",
         as: "authorDetails"
       }
     },
     {
-      $unwind: "$authorDetails" // Unwind to get a single author detail
+      $unwind: "$authorDetails"
+    },
+    {
+      $lookup: {
+        from: "likes", // Assuming the likes details are stored in the "likes" collection
+        localField: "_id",
+        foreignField: "bookId",
+        as: "likes"
+      }
+    },
+    {
+      $addFields: {
+        totalLikes: { $size: "$likes" }
+      }
     },
     {
       $project: {
         title: 1,
-        coverImageUrl:1,
-        url:1,
-        price:1,
-        createdAt:1,
-        bookId:1,
-        // Add other fields you want to include in the result
+        coverImageUrl: 1,
+        url: 1,
+        price: 1,
+        createdAt: 1,
+        bookId: 1,
         author: {
           _id: "$authorDetails._id",
           name: "$authorDetails.name",
-          // Include other author details you want
-        }
+          isVerified:"$authorDetails.identityDetail.isVerified"
+        },
+        totalLikes: 1
       }
     }
   ])
     .skip(skip)
     .limit(pageSize);
+  
+ 
   
   // If there are less than pageSize matching books, fetch additional books
   if (books.length < pageSize) {
@@ -159,27 +175,42 @@ exports.getBookForUserChoices = catchAsyncErrors(async (req, res, next) => {
         $unwind: "$authorDetails"
       },
       {
+        $lookup: {
+          from: "likes", // Assuming the likes details are stored in the "likes" collection
+          localField: "_id",
+          foreignField: "bookId",
+          as: "likes"
+        }
+      },
+      {
+        $addFields: {
+          totalLikes: { $size: "$likes" }
+        }
+      },
+      {
         $project: {
           title: 1,
-          title: 1,
-          coverImageUrl:1,
-          url:1,
-          price:1,
-          createdAt:1,
-          bookId:1,
+          coverImageUrl: 1,
+          url: 1,
+          price: 1,
+          createdAt: 1,
+          bookId: 1,
           author: {
             _id: "$authorDetails._id",
-            name: "$authorDetails.name"
-            // Include other author details you want
-          }
+            name: "$authorDetails.name",
+            isVerified:"$authorDetails.identityDetail.isVerified"
+
+          },
+          totalLikes: 1
         }
       }
-    ])
+    ])   
       .skip(skip + books.length)
       .limit(pageSize - books.length);
+     
     books = [...books, ...additionalBooks];
   }
-  
+
   return res.status(200).json({
     books
   });
@@ -205,21 +236,73 @@ exports.searchBooks = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-
-
 exports.getBookById = catchAsyncErrors(async (req, res, next) => {
+   const {bookId} = req.params;
+ 
+  try {
+    
   
-  const book = await Book.findById(req.params.bookId).select('title coverImageUrl url price _createdAt bookId description author').populate({
-    path: 'author',
-    model: 'User', // Replace with the actual model name for the authors
-    select: '_id name', // Include other fields you want
-  });
-  console.log(book)
+  let book = await Book.aggregate([
+    {
+      $match: {
+        "_id": new mongoose.Types.ObjectId(bookId),
+        "isSuspended.suspended": false,
+        "isDeleted.deleted": false,
+        unPublished: false
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "author",
+        foreignField: "_id",
+        as: "authorDetails"
+      }
+    },
+    {
+      $unwind: "$authorDetails"
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "bookId",
+        as: "likes"
+      }
+    },
+    {
+      $addFields: {
+        totalLikes: { $size: "$likes" }
+      }
+    },
+    {
+      $project: {
+        title: 1,
+        coverImageUrl: 1,
+        url: 1,
+        price: 1,
+        createdAt: 1,
+        bookId: 1,
+        description:1,
+        author: {
+          _id: "$authorDetails._id",
+          name: "$authorDetails.name",
+          isVerified:"$authorDetails.identityDetail.isVerified"
+
+        },
+        totalLikes: 1
+      }
+    }
+  ]);
+  
   if (!book || book.length === 0) {
     return next(new ErrorHander("Book not found", 404));
   }
 
-  return res.status(200).json({ book, success: true });
+  return res.status(200).json({ book:book[0], success: true });
+ } catch (error) {
+    console.log(error)
+  }
 });
 
 

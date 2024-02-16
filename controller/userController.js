@@ -8,17 +8,21 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const Book = require("../model/book");
+const { loadFile } = require("../utils/fileUpload");
 
 
 // register / login with google account
 exports.registerWithGoogleAccount = catchAsyncErrors(async (req, res, next) => {
   const { token } = req.body;
 
-  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_SECRET, process.env.CLIENT_URL);
   // after acquiring an oAuth2Client...
-  const { email, email_verified } = await client.getTokenInfo(token);
 
-  const user = await User.findOne({ email });
+ const url =  ` https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`
+
+ const {email , email_verified , name} = await (await fetch(url)).json()
+
+ const user = await User.findOne({ email });
 
   // register and send token
   if (!user) {
@@ -39,6 +43,7 @@ exports.registerWithGoogleAccount = catchAsyncErrors(async (req, res, next) => {
       userId,
       email,
       email_verified,
+      name
     });
 
     await user.save({ validateBeforeSave: false });
@@ -125,7 +130,6 @@ exports.verifyEmail = catchAsyncErrors(async (req, res, next) => {
   // token hanfle
   if(!isFinite(token)){
 
-    console.log("called")
   // creating token hash
   const emailVerifyToken = crypto
     .createHash("sha256")
@@ -151,7 +155,7 @@ if(isFinite(token)){
 
 
 if (!user) {
-    return next(new ErrorHander("Invalid Request.", 400));
+    return next(new ErrorHander("Incorrect OTP.", 400));
   }
 
   if (user.isSuspended.suspended) {
@@ -205,10 +209,13 @@ exports.getAccessToken = catchAsyncErrors(async (req, res, next) => {
 // user login (email ,password)
 exports.login = catchAsyncErrors(async (req, res, next) => {
   const { email, password, googleToken } = req.body;
-    
+
   if (!password && !googleToken) {
+
     return next(new ErrorHander("Invalid Password", 400));
+
   }
+
   const user = await User.findOne({ email }).select("+password");
 
   if (!user) {
@@ -233,10 +240,31 @@ exports.login = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHander("Your account is deleted.", 403));
   }
   if (user.email_verified === false) {
-    return next(new ErrorHander("Please verify your email.", 403));
+
+    const token = user.getToken();
+    
+    const otp = user.getOtp()
+
+   await user.save({ validateBeforeSave: false });
+
+
+  const mailOptions = {
+
+    email,
+  
+    subject: "Ebook Email Verification",
+  
+    message: `your verification otp is ${otp} , if you are using web click ${process.env.CLIENT_URL}/verify-email/${token}`,
+  
+  };
+
+  sendEmail(mailOptions);
+
+    return next(new ErrorHander("we have send OTP to your email.Please verify to proceed.", 401));
   }
 
   sendToken(user, 200, res);
+  
 });
 
 // Logout User
@@ -306,7 +334,7 @@ exports.checkOtpforMobile = catchAsyncErrors(async(req, res, next)=>{
 
   }
 
-  return next(new ErrorHander("invalid request" , 403))
+  return next(new ErrorHander("Incorrect OTP.It may be expired." , 403))
 
 })
 
@@ -443,21 +471,17 @@ exports.getSingleUser = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// update user  (nee to fix later.s)
+// update user  by user
 exports.updateUser = catchAsyncErrors(async (req, res, next) => {
-  // profileImage,
-  // name ,
-  // username,
-  // description
-  //socialLink
-
   // const {profileImage , name , username ,description, socialLink } = req.body;
 
   req.body.role = req.user.role;
   req.body.email_verified = req.user.email_verified;
   req.body.userId = req.user.userId;
   req.body.email = req.user.email;
-
+  req.body.identityDetail = req.user.identityDetail
+  req.body.paymentDetail = req.user.paymentDetail
+  req.body.isSuspended = req.user.isSuspended
   const user = await User.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
     runValidators: true,
@@ -661,8 +685,6 @@ exports.searchAuthor = catchAsyncErrors(async(req, res, next)=>{
 })
 
 
-
-
 exports.getAuthorDetails = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
 
@@ -683,3 +705,133 @@ exports.getAuthorDetails = catchAsyncErrors(async (req, res, next) => {
 
   return res.status(200).json({ author, books: allBooks, success: true });
 });
+
+
+
+
+
+// for admin
+exports.getIdentity = catchAsyncErrors(async (req, res, next) => {
+
+  const {isSubmitted , isVerified} = req.query
+
+  const allIdentity = await User.find({
+    "identityDetail.isSubmitted": JSON.parse(isSubmitted),
+    "identityDetail.isVerified": JSON.parse(isVerified)
+  }).select("-library -_v -socialLink -paymentDetail").sort({ createdAt: 1 }).limit(10);
+  
+  const key = await Promise.all(allIdentity.map(async (item) => {
+    return item.identityDetail.identityImageUrl ? await loadFile(item.identityDetail.identityImageUrl) : null;
+  }));
+  
+  // Update identityImageUrl in allIdentity
+  allIdentity.forEach((item, index) => {
+    item.identityDetail.identityImageUrl = key[index];
+  });
+
+
+  return res.status(200).json({
+    success: true,
+    message: `get dentity of ${JSON.stringify(req.query)} user`,
+    allIdentity
+  })
+
+})
+
+// for admin
+exports.updateIdentity = catchAsyncErrors(async (req, res, next) => {
+
+  const {id} = req.params;
+  const {id:updatedBy} = req.user;
+  console.log(req.body)
+
+   await User.findOneAndUpdate({_id:id},
+    
+   { ...req.body,"identityDetail.updatedBy":updatedBy },
+  )
+
+  return res.status(200).json({
+    success: true,
+    message: "Identity updated successfully",
+  })
+
+})
+
+
+// for admin
+exports.getPaymentDetail = catchAsyncErrors(async (req, res, next) => {
+
+  const {isSubmitted , isVerified} = req.query
+
+  const allPayment = await User.find({
+    "paymentDetail.isSubmitted": JSON.parse(isSubmitted),
+    "paymentDetail.isVerified": JSON.parse(isVerified)
+  }).select("-library -_v -socialLink ").sort({ createdAt: 1 }).limit(10);
+
+  return res.status(200).json({
+    success: true,
+    message: `get dentity of ${JSON.stringify(req.query)} user`,
+    allPayment
+  })
+
+})
+
+// for admin
+exports.updatePaymentDetail = catchAsyncErrors(async (req, res, next) => {
+
+  const {id} = req.params;
+  const {id:updatedBy} = req.user;
+  console.log(req.body)
+
+   await User.findOneAndUpdate({_id:id},
+    
+   { ...req.body,"paymentDetail.updatedBy":updatedBy },
+
+  )
+
+  return res.status(200).json({
+    success: true,
+    message: "Identity updated successfully",
+  })
+
+})
+
+// for admin
+exports.updateBookByAdmin = catchAsyncErrors(async (req, res, next) => {
+
+  const {id} = req.params;
+  const {id:updatedBy} = req.user;
+  console.log(req.body)
+
+   await Book.findOneAndUpdate({_id:id},
+    
+   { ...req.body,"issuspended.suspendedBy":updatedBy },
+  )
+
+  return res.status(200).json({
+    success: true,
+    message: "Identity updated successfully",
+  })
+
+})
+
+
+
+// for admin (suspend , delete etc)
+exports.updateUserByAdmin = catchAsyncErrors(async (req, res, next) => {
+ console.log("called user updation")
+  const {id} = req.params;
+
+  const {id:updatedBy} = req.user;
+
+   await User.findOneAndUpdate({_id:id},
+    
+   { ...req.body,updatedBy },
+  )
+
+  return res.status(200).json({
+    success: true,
+    message: "Identity updated successfully",
+  })
+
+})

@@ -4,15 +4,21 @@ const jwt = require("jsonwebtoken");
 const User = require("../model/user");
 
 exports.isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
-     
-  let { accessToken , refreshToken} = req.cookies ;
-  //  console.log(req.headers.authorization)
+
+  // come from user website
+  let { accessToken , refreshToken} =  req.cookies ;
+
+  // come from admin website
+  const {accesstoken , refreshtoken} = req.headers;  
+  if(!accessToken && accesstoken) accessToken = accesstoken
+  if(!refreshToken && refreshtoken) refreshToken = refreshtoken
+
+  // come from mobile user applicaiton
   if(!accessToken && !refreshToken && req.headers.authorization  ){
        accessToken =  JSON.parse(req.headers?.authorization)?.accessToken
        refreshToken =  JSON.parse(req.headers?.authorization)?.refreshToken
   }
   
-     
   if (!accessToken) {
 
     if(refreshToken){

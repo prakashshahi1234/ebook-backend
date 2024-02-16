@@ -25,12 +25,12 @@ app.use(cors(configCors))
 // Route Imports
 const user = require("./routes/userRoute");
 const book = require("./routes/bookRoute");
-const rating = require('./routes/ratingRoute')
-const purchase = require("./routes/purchaseRoute")
+const rating = require('./routes/like-ratingRoute')
+const purchase = require("./routes/payment-purchaseRoute")
 const uploadRoute = require("./routes/fileUploadRoute")
 const cupon = require("./routes/couponRoute")
 const cart = require("./routes/cartRoute")
-
+const report = require("./routes/reportRoute")
 
 app.use("/api/v1", user);
 app.use("/api/v1",book);
@@ -39,7 +39,7 @@ app.use("/api/v1" , purchase)
 app.use("/api/v1" , uploadRoute)
 app.use("/api/v1" , cupon)
 app.use("/api/v1" , cart)
-
+app.use("/api/v1" , report)
 // Middleware for Errors
 app.use(errorMiddleware);
 

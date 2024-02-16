@@ -37,7 +37,6 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       default: "user",
-      select: false,
     },
 
     email_verified: {
@@ -129,18 +128,24 @@ const userSchema = new mongoose.Schema(
     
     isSuspended: {
       suspended: { type: Boolean, default: false, select: false },
-      suspenededAt: Date,
+      suspenededAt: {type:Date , default:new Date()},
       suspendedBy: {
         select: false,
-
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
+    },
+    updatedBy:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      select: false,
+
     },
   },
 
   {
     timestamps: true,
+    versionKey:false
   }
 );
 
@@ -172,7 +177,11 @@ userSchema.methods.getRefreshToken = function () {
 
 // Compare Password
 userSchema.methods.comparePassword = async function (password) {
+
+  if(!(this.password)) return false;
+
   return await bcrypt.compare(password, this.password);
+  
 };
 
 // Generating Password Reset Token

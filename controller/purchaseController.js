@@ -3,14 +3,15 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const { getSignature, verifySignature } = require("../utils/esewa");
 const Cart = require("../model/cart");
 const Book = require("../model/book");
-const Purchase = require("../model/purchase")
+const Purchase = require("../model/purchase");
+const { loadFile } = require("../utils/fileUpload");
 
 exports.initiatePurchase = catchAsyncErrors(async (req, res, next) => {
  
   const { id } = req.user;
   
   const {paymentMethod} = req.params;
-   console.log(paymentMethod)
+   
   const cart = await Cart.findOneAndDelete({ userId: id });
 
   const _id = () => {
@@ -127,3 +128,23 @@ exports.getPurchasedBook = catchAsyncErrors(async(req , res ,next)=>{
 
 
 
+
+exports.readFreeBook = catchAsyncErrors(async(req , res ,next)=>{
+
+  const {id} = req.user;
+
+  const {bookId} = req.params
+
+  const book = await Book.findById(bookId)
+
+  if(book.price!==0){
+
+    return next(new ErrorHandler("its not free ok.", 401))
+
+  }
+
+ const url = await loadFile(book.url , 60)
+
+ return res.status(200).json({url , success:true})
+
+})

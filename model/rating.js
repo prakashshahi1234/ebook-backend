@@ -19,6 +19,7 @@ const ratingSchema = new mongoose.Schema({
   },
   review: {
     type: String,
+    max:[200 , '200 letter maximum.'],
     trim: true,
   },
 }, {

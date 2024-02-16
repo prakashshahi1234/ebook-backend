@@ -13,8 +13,6 @@ async function fileUpload(key , contentType , expiresInSeconds){
       const url = await getSignedUrl(s3Client,command, { expiresIn: expiresInSeconds });
  
       return url;
-
-
     }
     
  async function loadFile(key  ,  expiresInSeconds){
